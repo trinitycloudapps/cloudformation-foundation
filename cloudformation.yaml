@@ -36,6 +36,6 @@ Resources:
         StackUrl: !Ref StackUrl
         SubnetIdList: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
         VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/foundation/ec2-image-builder/cloudformation.yaml
+      TemplateURL: !Sub ${StackUrl}/ec2-image-builder/cloudformation.yaml
 
 #Outputs:
