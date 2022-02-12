@@ -26,7 +26,7 @@ Resources:
         Sequence: 1
         StackUrl: !Ref StackUrl
         Stage: !Ref Stage
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/cloudformation.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/cloudformation.yaml
 
   #Ec2 Image Builder
   Ec2ImageBuilderSubStack:
@@ -36,6 +36,6 @@ Resources:
         StackUrl: !Ref StackUrl
         SubnetIdList: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
         VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/foundation/ec2-image-builder/cloudformation.yaml
+      TemplateURL: !Sub ${StackUrl}/ec2-image-builder/cloudformation.yaml
 
 #Outputs:

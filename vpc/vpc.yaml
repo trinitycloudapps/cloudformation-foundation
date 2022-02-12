@@ -94,7 +94,7 @@ Resources:
         Sequence: !Ref Sequence
         Stage: !Ref Stage
         VpcId: !Ref Vpc
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/availability-zone.yaml
 
   AvailabilityZone2SubStack:
     Condition: CreateAvailabilityZone2
@@ -111,7 +111,7 @@ Resources:
         Sequence: !Ref Sequence
         Stage: !Ref Stage
         VpcId: !Ref Vpc
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/availability-zone.yaml
 
   AvailabilityZone3SubStack:
     Condition: CreateAvailabilityZone3
@@ -128,7 +128,7 @@ Resources:
         Sequence: !Ref Sequence
         Stage: !Ref Stage
         VpcId: !Ref Vpc
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/availability-zone.yaml
 
   AvailabilityZone4SubStack:
     Condition: CreateAvailabilityZone4
@@ -145,7 +145,7 @@ Resources:
         Sequence: !Ref Sequence
         Stage: !Ref Stage
         VpcId: !Ref Vpc
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/availability-zone.yaml
 
   AvailabilityZone5SubStack:
     Condition: CreateAvailabilityZone5
@@ -162,7 +162,7 @@ Resources:
         Sequence: !Ref Sequence
         Stage: !Ref Stage
         VpcId: !Ref Vpc
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/availability-zone.yaml
 
   PublicSubnetRouteTableInternetRoute:
     Type: AWS::EC2::Route

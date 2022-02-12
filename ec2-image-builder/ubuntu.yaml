@@ -76,7 +76,7 @@ Resources:
         - ComponentArn: !GetAtt ImageBuilderComponent.Arn
       Name: foundation-ubuntu-builder
       ParentImage: !Sub arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:image/ubuntu-server-20-lts-x86/x.x.x
-      Version: 0.0.1
+      Version: 1.0.0
 
   InfrastructureConfiguration:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
