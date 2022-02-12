@@ -24,7 +24,7 @@ Resources:
         StackUrl: !Ref StackUrl
         SubnetId: !Select [ 0, !Ref SubnetIdList ]
         VpcId: !Ref VpcId
-      TemplateURL: !Sub ${StackUrl}/foundation/ec2-image-builder/bastion.yaml
+      TemplateURL: !Sub ${StackUrl}/ec2-image-builder/bastion.yaml
 
   DockerSubStack:
     Type: AWS::CloudFormation::Stack
@@ -34,7 +34,7 @@ Resources:
         SubnetId: !Select [ 0, !Ref SubnetIdList ]
         UbuntuAmiId: !GetAtt UbuntuSubStack.Outputs.AmiId
         VpcId: !Ref VpcId
-      TemplateURL: !Sub ${StackUrl}/foundation/ec2-image-builder/docker.yaml
+      TemplateURL: !Sub ${StackUrl}/ec2-image-builder/docker.yaml
 
 Outputs:
 
