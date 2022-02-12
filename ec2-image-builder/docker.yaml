@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  InstanceType:
+    Default: t3a.nano
+    Type: String
+
+  StackUrl:
+    Type: String
+
+  SubnetId:
+    Type: String
+
+  UbuntuAmiId:
+    Type: AWS::EC2::Image::Id
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+#Mappings:
+
+#Conditions:
+
+Resources:
+
+  IamInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref IamRole
+
+  IamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/EC2InstanceProfileForImageBuilder
+      RoleName: !Sub foundation-${AWS::Region}-docker-image-builder-iam-role
+
+  Image:
+    Type: AWS::ImageBuilder::Image
+    Properties:
+      ImageRecipeArn: !Ref ImageRecipe
+      InfrastructureConfigurationArn: !Ref InfrastructureConfiguration
+
+  ImageBuilderComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: foundation-docker-component
+      Platform: Linux
+      Version: 1.0.0
+      Data: |
+        name: Install
+        description: Downloads and Installs Required Components
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: Install
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - 'apt update'
+                    - 'apt upgrade -y'
+                    - 'apt remove -y docker docker.io containerd runc'
+                    - 'apt install -y ca-certificates curl gnupg lsb-release'
+                    - 'curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg'
+                    - 'echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null'
+                    - 'apt update'
+                    - 'apt install -y docker-ce docker-ce-cli containerd.io'
+                    - 'sudo curl -L "https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose'
+                    - 'chmod +x /usr/local/bin/docker-compose'
+
+  ImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      Components:
+        - ComponentArn: !Sub arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/amazon-cloudwatch-agent-linux/1.0.0/1
+        - ComponentArn: !GetAtt ImageBuilderComponent.Arn
+      Name: foundation-docker-builder
+      ParentImage: !Ref UbuntuAmiId
+      Version: 0.0.1
+
+  InfrastructureConfiguration:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: foundation-docker-infrastructure-configuration
+      InstanceProfileName: !Ref IamInstanceProfile
+      InstanceTypes:
+        - !Ref InstanceType
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      SubnetId: !Ref SubnetId
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: founation-docker-builder-security-group
+      GroupName: foundation-docker-builder-security-group
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: '0.0.0.0/0'
+      SecurityGroupIngress:
+        - IpProtocol: '-1'
+          CidrIp: '0.0.0.0/0'
+      VpcId: !Ref VpcId
+
+Outputs:
+
+  AmiId:
+    Value: !GetAtt Image.ImageId

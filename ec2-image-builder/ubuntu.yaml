@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  InstanceType:
+    Default: t3a.nano
+    Type: String
+
+  StackUrl:
+    Type: String
+
+  SubnetId:
+    Type: String
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+#Mappings:
+
+#Conditions:
+
+Resources:
+
+  IamInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref IamRole
+
+  IamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/EC2InstanceProfileForImageBuilder
+      RoleName: !Sub foundation-${AWS::Region}-ubuntu-image-builder-iam-role
+
+  Image:
+    Type: AWS::ImageBuilder::Image
+    Properties:
+      ImageRecipeArn: !Ref ImageRecipe
+      InfrastructureConfigurationArn: !Ref InfrastructureConfiguration
+
+  ImageBuilderComponent:
+    Type: AWS::ImageBuilder::Component
+    Properties:
+      Name: foundation-ubuntu-component
+      Platform: Linux
+      Version: 1.0.0
+      Data: |
+        name: Install
+        description: Downloads and Installs Required Components
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: Install
+                action: ExecuteBash
+                inputs:
+                  commands:
+                    - 'apt update'
+                    - 'apt upgrade -y'
+
+  ImageRecipe:
+    Type: AWS::ImageBuilder::ImageRecipe
+    Properties:
+      Components:
+        - ComponentArn: !Sub arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:component/amazon-cloudwatch-agent-linux/1.0.0/1
+        - ComponentArn: !GetAtt ImageBuilderComponent.Arn
+      Name: foundation-ubuntu-builder
+      ParentImage: !Sub arn:${AWS::Partition}:imagebuilder:${AWS::Region}:aws:image/ubuntu-server-20-lts-x86/x.x.x
+      Version: 0.0.1
+
+  InfrastructureConfiguration:
+    Type: AWS::ImageBuilder::InfrastructureConfiguration
+    Properties:
+      Name: !Sub foundation-ubuntu-infrastructure-configuration
+      InstanceProfileName: !Ref IamInstanceProfile
+      InstanceTypes:
+        - !Ref InstanceType
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      SubnetId: !Ref SubnetId
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: foundation-ubuntu-builder-security-group
+      GroupName: foundation-ubuntu-builder-security-group
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: '0.0.0.0/0'
+      SecurityGroupIngress:
+        - IpProtocol: '-1'
+          CidrIp: '0.0.0.0/0'
+      VpcId: !Ref VpcId
+
+Outputs:
+
+  AmiId:
+    Value: !GetAtt Image.ImageId

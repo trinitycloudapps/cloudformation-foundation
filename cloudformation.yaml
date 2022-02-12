@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  StackUrl:
+    Type: String
+
+  Stage:
+    Type: String
+
+#Mappings:
+
+#Conditions:
+
+Resources:
+
+  #Vpc
+  VpcSubStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZoneCount: 1
+        CidrClassB: 1
+        CreateNatGateways: false
+        Name: foundation
+        Sequence: 1
+        StackUrl: !Ref StackUrl
+        Stage: !Ref Stage
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/cloudformation.yaml
+
+  #Ec2 Image Builder
+  Ec2ImageBuilderSubStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        StackUrl: !Ref StackUrl
+        SubnetIdList: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
+        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
+      TemplateURL: !Sub ${StackUrl}/foundation/ec2-image-builder/cloudformation.yaml
+
+#Outputs:

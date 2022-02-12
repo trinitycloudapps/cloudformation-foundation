@@ -1,0 +1,189 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  AvailabilityZoneCount:
+    AllowedValues:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+    Default: 2
+    Type: String
+
+  BastionAmiId:
+    Default: none
+    Type: String
+
+  BastionInstanceType:
+    Default: t3.nano
+    Type: String
+
+  BastionKeyName:
+    Default: none
+    Type: String
+
+  CidrClassB:
+    Type: String
+
+  CreateNatGateways:
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Type: String
+
+  Domain:
+    Default: none
+    Type: String
+
+  Name:
+    Type: String
+
+  NatInstanceAmiId:
+    Default: none
+    Type: String
+
+  NatInstanceType:
+    Default: t3.nano
+    Type: String
+
+  NatKeyName:
+    Default: none
+    Type: String
+
+  PublicHostedZoneIsApex:
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Type: String
+
+  Sequence:
+    Default: 1
+    Type: String
+
+  StackUrl:
+    Type: String
+
+  Stage:
+    Type: String
+
+Conditions:
+
+  CreateNatInstanceA: !And
+    - !Equals [ !Ref CreateNatGateways, false ]
+    - !Not [ !Equals [ !Ref NatInstanceAmiId, none ] ]
+  CreateNatInstanceB: !And
+    - !Equals [ !Ref CreateNatGateways, false ]
+    - !And
+      - !Not [ !Equals [ !Ref NatInstanceAmiId, none ] ]
+      - !Or
+        - !Equals [ !Ref AvailabilityZoneCount, 2 ]
+        - !Or
+          - !Equals [ !Ref AvailabilityZoneCount, 3 ]
+          - !Or
+            - !Equals [ !Ref AvailabilityZoneCount, 4 ]
+            - !Equals [ !Ref AvailabilityZoneCount, 5 ]
+  HasBastion: !Not [ !Equals [ !Ref BastionAmiId, none ] ]
+  HasBastionKeyName: !Not [ !Equals [ !Ref BastionKeyName, none ] ]
+  HasDomain: !Not [ !Equals [ !Ref Domain, none ] ]
+  HasNatKeyName: !Not [ !Equals [ !Ref NatKeyName, none ] ]
+  PublicHostedZoneIsApex: !Equals [ !Ref PublicHostedZoneIsApex, true ]
+
+Resources:
+
+  BastionStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: HasBastion
+    Properties:
+      Parameters:
+        AmiId: !Ref BastionAmiId
+        DomainName: !If [ HasDomain, !Sub 'bastion.${Name}-${Stage}.${Domain}', none ]
+        HostedZoneId: !If [ HasDomain, !GetAtt PublicHostedZone.Outputs.HostedZoneId, none ]
+        InstanceType: !Ref BastionInstanceType
+        KeyName: !If [ HasBastionKeyName, !Ref BastionKeyName, !Ref 'AWS::NoValue' ]
+        Stage: !Ref Stage
+        SubnetIdList: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
+        VpcCidr: !GetAtt VpcSubStack.Outputs.VpcCidr
+        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/bastion.yaml
+
+  PrivateHostedZone:
+    Type: AWS::CloudFormation::Stack
+    Condition: HasDomain
+    Properties:
+      Parameters:
+        Domain: !Sub internal.${Name}-${Stage}.${Domain}
+        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/hosted-zone.yaml
+
+  PublicHostedZone:
+    Type: AWS::CloudFormation::Stack
+    Condition: HasDomain
+    Properties:
+      Parameters:
+        Domain: !If
+          - PublicHostedZoneIsApex
+          - !Ref Domain
+          - !Sub ${Name}-${Stage}.${Domain}
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/hosted-zone.yaml
+
+  SubnetANatInstance:
+    Condition: CreateNatInstanceA
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AmiId: !Ref NatInstanceAmiId
+        InstanceType: !Ref NatInstanceType
+        KeyName: !If [ HasNatKeyName, !Ref NatKeyName, !Ref 'AWS::NoValue' ]
+        PublicSubnetId: !Select [ 0, !Split [ ',', !GetAtt VpcSubStack.Outputs.PublicSubnetIdList ] ]
+        RouteTableId: !Select [ 0, !Split [ ',', !GetAtt VpcSubStack.Outputs.PrivateNatSubnetRouteTableList ] ]
+        VpcCidr: !GetAtt VpcSubStack.Outputs.VpcCidr
+        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/nat-instance.yaml
+
+  SubnetBNatInstance:
+    Condition: CreateNatInstanceB
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AmiId: !Ref NatInstanceAmiId
+        InstanceType: !Ref NatInstanceType
+        KeyName: !If [ HasNatKeyName, !Ref NatKeyName, !Ref 'AWS::NoValue' ]
+        PublicSubnetId: !Select [ 1, !Split [ ',', !GetAtt VpcSubStack.Outputs.PublicSubnetIdList ] ]
+        RouteTableId: !Select [ 1, !Split [ ',', !GetAtt VpcSubStack.Outputs.PrivateNatSubnetRouteTableList ] ]
+        VpcCidr: !GetAtt VpcSubStack.Outputs.VpcCidr
+        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/nat-instance.yaml
+
+  VpcSubStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZoneCount: !Ref AvailabilityZoneCount
+        CidrClassB: !Ref CidrClassB
+        CreateNatGateways: !Ref CreateNatGateways
+        Name: !Ref Name
+        Sequence: !Ref Sequence
+        StackUrl: !Ref StackUrl
+        Stage: !Ref Stage
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/vpc.yaml
+
+Outputs:
+
+  PrivateNatSubnetIdList:
+    Value: !GetAtt VpcSubStack.Outputs.PrivateNatSubnetIdList
+
+  PrivateSubnetIdList:
+    Value: !GetAtt VpcSubStack.Outputs.PrivateSubnetIdList
+
+  PublicSubnetIdList:
+    Value: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
+
+  VpcCidr:
+    Value: !GetAtt VpcSubStack.Outputs.VpcCidr
+
+  VpcId:
+    Value: !GetAtt VpcSubStack.Outputs.VpcId

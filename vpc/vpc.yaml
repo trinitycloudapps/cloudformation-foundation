@@ -1,0 +1,364 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  AvailabilityZones:
+    Default: a,b,c,d,e,f
+    Type: CommaDelimitedList
+
+  AvailabilityZoneCount:
+    AllowedValues:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+    Default: 2
+    Type: String
+
+  CidrClassB:
+    Type: String
+
+  CreateNatGateways:
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Type: String
+
+  EnableDnsHostnames:
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Type: String
+
+  EnableDnsSupport:
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Type: String
+
+  Name:
+    Type: String
+
+  Sequence:
+    Default: 1
+    Type: String
+
+  StackUrl:
+    Type: String
+
+  Stage:
+    Type: String
+
+Conditions:
+
+  CreateAvailabilityZone2: !Or
+    - !Equals [ !Ref AvailabilityZoneCount, 2 ]
+    - !Or
+      - !Equals [ !Ref AvailabilityZoneCount, 3 ]
+      - !Or
+        - !Equals [ !Ref AvailabilityZoneCount, 4 ]
+        - !Equals [ !Ref AvailabilityZoneCount, 5 ]
+  CreateAvailabilityZone3: !Or
+    - !Equals [ !Ref AvailabilityZoneCount, 3 ]
+    - !Or
+      - !Equals [ !Ref AvailabilityZoneCount, 4 ]
+      - !Equals [ !Ref AvailabilityZoneCount, 5 ]
+  CreateAvailabilityZone4: !Or
+    - !Equals [ !Ref AvailabilityZoneCount, 4 ]
+    - !Equals [ !Ref AvailabilityZoneCount, 5 ]
+  CreateAvailabilityZone5: !Equals [ !Ref AvailabilityZoneCount, 5 ]
+  CreateNatGateways: !Equals [ !Ref CreateNatGateways, true ]
+
+Resources:
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-internet-gateway
+
+  AvailabilityZone1SubStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: !Select [ 0, !Ref AvailabilityZones ]
+        CidrClassB: !Ref CidrClassB
+        CreateNatGateway: !Ref CreateNatGateways
+        Index: 1
+        Name: !Ref Name
+        Sequence: !Ref Sequence
+        Stage: !Ref Stage
+        VpcId: !Ref Vpc
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+
+  AvailabilityZone2SubStack:
+    Condition: CreateAvailabilityZone2
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: !Select [ 1, !Ref AvailabilityZones ]
+        CidrClassB: !Ref CidrClassB
+        CreateNatGateway: !Ref CreateNatGateways
+        Index: 2
+        Name: !Ref Name
+        PrivateSubnetRouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnetRouteTable
+        PublicSubnetRouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnetRouteTable
+        Sequence: !Ref Sequence
+        Stage: !Ref Stage
+        VpcId: !Ref Vpc
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+
+  AvailabilityZone3SubStack:
+    Condition: CreateAvailabilityZone3
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: !Select [ 2, !Ref AvailabilityZones ]
+        CidrClassB: !Ref CidrClassB
+        CreateNatGateway: !Ref CreateNatGateways
+        Index: 3
+        Name: !Ref Name
+        PrivateSubnetRouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnetRouteTable
+        PublicSubnetRouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnetRouteTable
+        Sequence: !Ref Sequence
+        Stage: !Ref Stage
+        VpcId: !Ref Vpc
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+
+  AvailabilityZone4SubStack:
+    Condition: CreateAvailabilityZone4
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: !Select [ 3, !Ref AvailabilityZones ]
+        CidrClassB: !Ref CidrClassB
+        CreateNatGateway: !Ref CreateNatGateways
+        Index: 4
+        Name: !Ref Name
+        PrivateSubnetRouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnetRouteTable
+        PublicSubnetRouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnetRouteTable
+        Sequence: !Ref Sequence
+        Stage: !Ref Stage
+        VpcId: !Ref Vpc
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+
+  AvailabilityZone5SubStack:
+    Condition: CreateAvailabilityZone5
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: !Select [ 4, !Ref AvailabilityZones ]
+        CidrClassB: !Ref CidrClassB
+        CreateNatGateway: !Ref CreateNatGateways
+        Index: 5
+        Name: !Ref Name
+        PrivateSubnetRouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnetRouteTable
+        PublicSubnetRouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnetRouteTable
+        Sequence: !Ref Sequence
+        Stage: !Ref Stage
+        VpcId: !Ref Vpc
+      TemplateURL: !Sub ${StackUrl}/templates/vpc/availability-zone.yaml
+
+  PublicSubnetRouteTableInternetRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnetRouteTable
+    DependsOn:
+      - VpcGatewayAttachment
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Sub 10.${CidrClassB}.0.0/16
+      EnableDnsHostnames: !Ref EnableDnsHostnames
+      EnableDnsSupport: !Ref EnableDnsSupport
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-vpc
+
+  VpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+Outputs:
+
+  EipList:
+    Condition: CreateNatGateways
+    Value: !If
+      - CreateAvailabilityZone5
+      - !Join
+        - ','
+        - - !GetAtt AvailabilityZone1SubStack.Outputs.Eip
+          - !GetAtt AvailabilityZone2SubStack.Outputs.Eip
+          - !GetAtt AvailabilityZone3SubStack.Outputs.Eip
+          - !GetAtt AvailabilityZone4SubStack.Outputs.Eip
+          - !GetAtt AvailabilityZone5SubStack.Outputs.Eip
+      - !If
+        - CreateAvailabilityZone4
+        - !Join
+          - ','
+          - - !GetAtt AvailabilityZone1SubStack.Outputs.Eip
+            - !GetAtt AvailabilityZone2SubStack.Outputs.Eip
+            - !GetAtt AvailabilityZone3SubStack.Outputs.Eip
+            - !GetAtt AvailabilityZone4SubStack.Outputs.Eip
+        - !If
+          - CreateAvailabilityZone3
+          - !Join
+            - ','
+            - - !GetAtt AvailabilityZone1SubStack.Outputs.Eip
+              - !GetAtt AvailabilityZone2SubStack.Outputs.Eip
+              - !GetAtt AvailabilityZone3SubStack.Outputs.Eip
+          - !If
+            - CreateAvailabilityZone2
+            - !Join
+              - ','
+              - - !GetAtt AvailabilityZone1SubStack.Outputs.Eip
+                - !GetAtt AvailabilityZone2SubStack.Outputs.Eip
+            - !GetAtt AvailabilityZone1SubStack.Outputs.Eip
+
+  PrivateNatSubnetIdList:
+    Value: !If
+      - CreateAvailabilityZone5
+      - !Join
+        - ','
+        - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnet
+          - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateNatSubnet
+          - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateNatSubnet
+          - !GetAtt AvailabilityZone4SubStack.Outputs.PrivateNatSubnet
+          - !GetAtt AvailabilityZone5SubStack.Outputs.PrivateNatSubnet
+      - !If
+        - CreateAvailabilityZone4
+        - !Join
+          - ','
+          - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnet
+            - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateNatSubnet
+            - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateNatSubnet
+            - !GetAtt AvailabilityZone4SubStack.Outputs.PrivateNatSubnet
+        - !If
+          - CreateAvailabilityZone3
+          - !Join
+            - ','
+            - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnet
+              - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateNatSubnet
+              - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateNatSubnet
+          - !If
+            - CreateAvailabilityZone2
+            - !Join
+              - ','
+              - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnet
+                - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateNatSubnet
+            - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnet
+
+  PrivateNatSubnetRouteTableList:
+    Value: !If
+      - CreateAvailabilityZone5
+      - !Join
+        - ','
+        - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnetRouteTable
+          - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateNatSubnetRouteTable
+          - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateNatSubnetRouteTable
+          - !GetAtt AvailabilityZone4SubStack.Outputs.PrivateNatSubnetRouteTable
+          - !GetAtt AvailabilityZone5SubStack.Outputs.PrivateNatSubnetRouteTable
+      - !If
+        - CreateAvailabilityZone4
+        - !Join
+          - ','
+          - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnetRouteTable
+            - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateNatSubnetRouteTable
+            - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateNatSubnetRouteTable
+            - !GetAtt AvailabilityZone4SubStack.Outputs.PrivateNatSubnetRouteTable
+        - !If
+          - CreateAvailabilityZone3
+          - !Join
+            - ','
+            - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnetRouteTable
+              - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateNatSubnetRouteTable
+              - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateNatSubnetRouteTable
+          - !If
+            - CreateAvailabilityZone2
+            - !Join
+              - ','
+              - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnetRouteTable
+                - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateNatSubnetRouteTable
+            - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateNatSubnetRouteTable
+
+  PrivateSubnetIdList:
+    Value: !If
+      - CreateAvailabilityZone5
+      - !Join
+        - ','
+        - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnet
+          - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateSubnet
+          - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateSubnet
+          - !GetAtt AvailabilityZone4SubStack.Outputs.PrivateSubnet
+          - !GetAtt AvailabilityZone5SubStack.Outputs.PrivateSubnet
+      - !If
+        - CreateAvailabilityZone4
+        - !Join
+          - ','
+          - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnet
+            - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateSubnet
+            - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateSubnet
+            - !GetAtt AvailabilityZone4SubStack.Outputs.PrivateSubnet
+        - !If
+          - CreateAvailabilityZone3
+          - !Join
+            - ','
+            - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnet
+              - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateSubnet
+              - !GetAtt AvailabilityZone3SubStack.Outputs.PrivateSubnet
+          - !If
+            - CreateAvailabilityZone2
+            - !Join
+              - ','
+              - - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnet
+                - !GetAtt AvailabilityZone2SubStack.Outputs.PrivateSubnet
+            - !GetAtt AvailabilityZone1SubStack.Outputs.PrivateSubnet
+
+  PublicSubnetIdList:
+    Value: !If
+      - CreateAvailabilityZone5
+      - !Join
+        - ','
+        - - !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnet
+          - !GetAtt AvailabilityZone2SubStack.Outputs.PublicSubnet
+          - !GetAtt AvailabilityZone3SubStack.Outputs.PublicSubnet
+          - !GetAtt AvailabilityZone4SubStack.Outputs.PublicSubnet
+          - !GetAtt AvailabilityZone5SubStack.Outputs.PublicSubnet
+      - !If
+        - CreateAvailabilityZone4
+        - !Join
+          - ','
+          - - !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnet
+            - !GetAtt AvailabilityZone2SubStack.Outputs.PublicSubnet
+            - !GetAtt AvailabilityZone3SubStack.Outputs.PublicSubnet
+            - !GetAtt AvailabilityZone4SubStack.Outputs.PublicSubnet
+        - !If
+          - CreateAvailabilityZone3
+          - !Join
+            - ','
+            - - !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnet
+              - !GetAtt AvailabilityZone2SubStack.Outputs.PublicSubnet
+              - !GetAtt AvailabilityZone3SubStack.Outputs.PublicSubnet
+          - !If
+            - CreateAvailabilityZone2
+            - !Join
+              - ','
+              - - !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnet
+                - !GetAtt AvailabilityZone2SubStack.Outputs.PublicSubnet
+            - !GetAtt AvailabilityZone1SubStack.Outputs.PublicSubnet
+
+  VpcCidr:
+    Value: !GetAtt Vpc.CidrBlock
+
+  VpcId:
+    Value: !Ref Vpc

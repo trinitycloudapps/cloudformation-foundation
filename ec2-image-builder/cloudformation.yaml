@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  StackUrl:
+    Type: String
+
+  SubnetIdList:
+    Type: CommaDelimitedList
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+#Mappings:
+
+#Conditions:
+
+Resources:
+
+  UbuntuSubStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        StackUrl: !Ref StackUrl
+        SubnetId: !Select [ 0, !Ref SubnetIdList ]
+        VpcId: !Ref VpcId
+      TemplateURL: !Sub ${StackUrl}/foundation/ec2-image-builder/bastion.yaml
+
+  DockerSubStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        StackUrl: !Ref StackUrl
+        SubnetId: !Select [ 0, !Ref SubnetIdList ]
+        UbuntuAmiId: !GetAtt UbuntuSubStack.Outputs.AmiId
+        VpcId: !Ref VpcId
+      TemplateURL: !Sub ${StackUrl}/foundation/ec2-image-builder/docker.yaml
+
+Outputs:
+
+  UbuntuAmiId:
+    Value: !GetAtt UbuntuSubStack.Outputs.AmiId
+
+  DockerAmiId:
+    Value: !GetAtt DockerSubStack.Outputs.AmiId

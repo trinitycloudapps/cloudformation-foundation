@@ -1,0 +1,347 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  AvailabilityZone:
+    AllowedValues:
+      - a
+      - b
+      - c
+      - d
+      - e
+      - f
+    Type: String
+
+  CidrClassB:
+    Type: String
+
+  CreateNatGateway:
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Type: String
+
+  EipAllocationId:
+    Default: none
+    Type: String
+
+  Index:
+    AllowedValues:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+    Default: 1
+    Type: String
+
+  Name:
+    Type: String
+
+  PrivateSubnetRouteTableId:
+    Default: none
+    Type: String
+
+  PublicSubnetRouteTableId:
+    Default: none
+    Type: String
+
+  Sequence:
+    Default: 1
+    Type: String
+
+  Stage:
+    Type: String
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+Mappings:
+
+  CidrClassCMap:
+    '1':
+      private: 0
+      privatenat: 16
+      public: 32
+    '2':
+      private: 48
+      privatenat: 64
+      public: 80
+    '3':
+      private: 96
+      privatenat: 112
+      public: 128
+    '4':
+      private: 144
+      privatenat: 160
+      public: 176
+    '5':
+      private: 192
+      privatenat: 208
+      public: 224
+
+Conditions:
+
+  CreatePrivateSubnetRouteTable: !Equals [ !Ref PrivateSubnetRouteTableId, none ]
+  CreatePublicSubnetRouteTable: !Equals [ !Ref PublicSubnetRouteTableId, none ]
+  HasEipAllocationId: !Not [ !Equals [ !Ref EipAllocationId, none ] ]
+  ShouldCreateEip: !And
+    - !Not [ !Equals [ !Ref EipAllocationId, none ] ]
+    - !Equals [ !Ref CreateNatGateway, true ]
+  ShouldCreateNatGateway: !Equals [ !Ref CreateNatGateway, true ]
+
+Resources:
+
+  Eip:
+    Condition: ShouldCreateNatGateway
+    DeletionPolicy: Retain
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Condition: ShouldCreateNatGateway
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !If
+        - HasEipAllocationId
+        - !Ref EipAllocationId
+        - !GetAtt Eip.AllocationId
+      SubnetId: !Ref PublicSubnet
+
+  NatGatewayRoute:
+    Condition: ShouldCreateNatGateway
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGateway
+      RouteTableId: !Ref PrivateNatSubnetRouteTable
+
+  PrivateNatNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-private-nat-network-acl-${AvailabilityZone}
+      VpcId: !Ref VpcId
+
+  PrivateNatNetworkAclEntryAllowVpcIn:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: '0.0.0.0/0'
+      Egress: false
+      NetworkAclId: !Ref PrivateNatNetworkAcl
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 1
+
+  PrivateNatNetworkAclEntryAllowAllOut:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: '0.0.0.0/0'
+      Egress: true
+      NetworkAclId: !Ref PrivateNatNetworkAcl
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 1
+
+  PrivateNatSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub ${AWS::Region}${AvailabilityZone}
+      CidrBlock: !Sub
+        - 10.${CidrClassB}.${CidrClassC}.0/20
+        - CidrClassC: !FindInMap [ CidrClassCMap, !Ref Index, privatenat ]
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-private-nat-subnet-${AvailabilityZone}
+
+  PrivateNatSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-private-nat-routetable-${AvailabilityZone}
+      VpcId: !Ref VpcId
+
+  PrivateNatSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateNatSubnet
+      RouteTableId: !Ref PrivateNatSubnetRouteTable
+
+  PrivateNatNetworkAclSubnetAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: !Ref PrivateNatNetworkAcl
+      SubnetId: !Ref PrivateNatSubnet
+
+  PrivateNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-private-network-acl
+      VpcId: !Ref VpcId
+
+  PrivateNetworkAclEntryAllowVpcIn:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: !Sub 10.${CidrClassB}.0.0/16
+      Egress: false
+      NetworkAclId: !Ref PrivateNetworkAcl
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 1
+
+  PrivateNetworkAclEntryAllowVpcOut:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: !Sub 10.${CidrClassB}.0.0/16
+      Egress: true
+      NetworkAclId: !Ref PrivateNetworkAcl
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 1
+
+  PrivateNetworkAclSubnetAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkAcl
+      SubnetId: !Ref PrivateSubnet
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub ${AWS::Region}${AvailabilityZone}
+      CidrBlock: !Sub
+        - 10.${CidrClassB}.${CidrClassC}.0/20
+        - CidrClassC: !FindInMap [ CidrClassCMap, !Ref Index, private ]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-private-subnet-${AvailabilityZone}
+      VpcId: !Ref VpcId
+
+  PrivateSubnetRouteTable:
+    Condition: CreatePrivateSubnetRouteTable
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-private-routetable
+      VpcId: !Ref VpcId
+
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !If
+        - CreatePrivateSubnetRouteTable
+        - !Ref PrivateSubnetRouteTable
+        - !Ref PrivateSubnetRouteTableId
+
+  PublicNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-public-network-acl-${AvailabilityZone}
+      VpcId: !Ref VpcId
+
+  PublicNetworkAclEntryAllowAllIn:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: '0.0.0.0/0'
+      Egress: false
+      NetworkAclId: !Ref PublicNetworkAcl
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 1
+
+  PublicNetworkAclEntryAllowAllOut:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: '0.0.0.0/0'
+      Egress: true
+      NetworkAclId: !Ref PublicNetworkAcl
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 1
+
+  PublicNetworkAclSubnetAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: !Ref PublicNetworkAcl
+      SubnetId: !Ref PublicSubnet
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub ${AWS::Region}${AvailabilityZone}
+      CidrBlock: !Sub
+        - 10.${CidrClassB}.${CidrClassC}.0/20
+        - CidrClassC: !FindInMap [ CidrClassCMap, !Ref Index, public ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-public-subnet-${AvailabilityZone}
+      VpcId: !Ref VpcId
+
+  PublicSubnetRouteTable:
+    Condition: CreatePublicSubnetRouteTable
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name}-${Stage}-${Sequence}-public-routetable-${AvailabilityZone}
+      VpcId: !Ref VpcId
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !If
+        - CreatePublicSubnetRouteTable
+        - !Ref PublicSubnetRouteTable
+        - !Ref PublicSubnetRouteTableId
+
+Outputs:
+
+  Eip:
+    Condition: ShouldCreateNatGateway
+    Value: !Ref Eip
+
+  PrivateNatNetworkAcl:
+    Value: !Ref PrivateNatNetworkAcl
+
+  PrivateNatSubnet:
+    Value: !Ref PrivateNatSubnet
+
+  PrivateNatSubnetRouteTable:
+    Value: !Ref PrivateNatSubnetRouteTable
+
+  PrivateNetworkAcl:
+    Value: !Ref PrivateNetworkAcl
+
+  PrivateSubnet:
+    Value: !Ref PrivateSubnet
+
+  PrivateSubnetRouteTable:
+    Value: !If
+      - CreatePrivateSubnetRouteTable
+      - !Ref PrivateSubnetRouteTable
+      - !Ref PrivateSubnetRouteTableId
+
+  PublicNetworkAcl:
+    Value: !Ref PublicNetworkAcl
+
+  PublicSubnet:
+    Value: !Ref PublicSubnet
+
+  PublicSubnetRouteTable:
+    Value: !If
+      - CreatePublicSubnetRouteTable
+      - !Ref PublicSubnetRouteTable
+      - !Ref PublicSubnetRouteTableId
