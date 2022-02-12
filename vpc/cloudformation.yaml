@@ -108,7 +108,7 @@ Resources:
         SubnetIdList: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
         VpcCidr: !GetAtt VpcSubStack.Outputs.VpcCidr
         VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/bastion.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/bastion.yaml
 
   PrivateHostedZone:
     Type: AWS::CloudFormation::Stack
@@ -117,7 +117,7 @@ Resources:
       Parameters:
         Domain: !Sub internal.${Name}-${Stage}.${Domain}
         VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/hosted-zone.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/hosted-zone.yaml
 
   PublicHostedZone:
     Type: AWS::CloudFormation::Stack
@@ -128,7 +128,7 @@ Resources:
           - PublicHostedZoneIsApex
           - !Ref Domain
           - !Sub ${Name}-${Stage}.${Domain}
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/hosted-zone.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/hosted-zone.yaml
 
   SubnetANatInstance:
     Condition: CreateNatInstanceA
@@ -142,7 +142,7 @@ Resources:
         RouteTableId: !Select [ 0, !Split [ ',', !GetAtt VpcSubStack.Outputs.PrivateNatSubnetRouteTableList ] ]
         VpcCidr: !GetAtt VpcSubStack.Outputs.VpcCidr
         VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/nat-instance.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/nat-instance.yaml
 
   SubnetBNatInstance:
     Condition: CreateNatInstanceB
@@ -156,7 +156,7 @@ Resources:
         RouteTableId: !Select [ 1, !Split [ ',', !GetAtt VpcSubStack.Outputs.PrivateNatSubnetRouteTableList ] ]
         VpcCidr: !GetAtt VpcSubStack.Outputs.VpcCidr
         VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/nat-instance.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/nat-instance.yaml
 
   VpcSubStack:
     Type: AWS::CloudFormation::Stack
@@ -169,7 +169,7 @@ Resources:
         Sequence: !Ref Sequence
         StackUrl: !Ref StackUrl
         Stage: !Ref Stage
-      TemplateURL: !Sub ${StackUrl}/templates/vpc/vpc.yaml
+      TemplateURL: !Sub ${StackUrl}/vpc/vpc.yaml
 
 Outputs:
 
