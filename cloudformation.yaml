@@ -14,8 +14,18 @@ Parameters:
 
 Resources:
 
+  #Ec2 Image Builder
+  Ec2ImageBuilderSubStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        StackUrl: !Ref StackUrl
+        SubnetIdList: !GetAtt ImageBuilderVpcSubStack.Outputs.PublicSubnetIdList
+        VpcId: !GetAtt ImageBuilderVpcSubStack.Outputs.VpcId
+      TemplateURL: !Sub ${StackUrl}/ec2-image-builder/cloudformation.yaml
+
   #Vpc
-  VpcSubStack:
+  ImageBuilderVpcSubStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
@@ -27,15 +37,5 @@ Resources:
         StackUrl: !Ref StackUrl
         Stage: !Ref Stage
       TemplateURL: !Sub ${StackUrl}/vpc/cloudformation.yaml
-
-  #Ec2 Image Builder
-  Ec2ImageBuilderSubStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      Parameters:
-        StackUrl: !Ref StackUrl
-        SubnetIdList: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
-        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/ec2-image-builder/cloudformation.yaml
 
 #Outputs:
