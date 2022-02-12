@@ -24,7 +24,7 @@ Resources:
         StackUrl: !Ref StackUrl
         SubnetId: !Select [ 0, !Ref SubnetIdList ]
         VpcId: !Ref VpcId
-      TemplateURL: !Sub ${StackUrl}/ec2-image-builder/bastion.yaml
+      TemplateURL: !Sub ${StackUrl}/ec2-image-builder/ubuntu.yaml
 
   DockerSubStack:
     Type: AWS::CloudFormation::Stack
