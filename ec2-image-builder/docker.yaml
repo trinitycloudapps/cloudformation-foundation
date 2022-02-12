@@ -87,7 +87,7 @@ Resources:
         - ComponentArn: !GetAtt ImageBuilderComponent.Arn
       Name: foundation-docker-builder
       ParentImage: !Ref UbuntuAmiId
-      Version: 0.0.1
+      Version: 1.0.0
 
   InfrastructureConfiguration:
     Type: AWS::ImageBuilder::InfrastructureConfiguration
