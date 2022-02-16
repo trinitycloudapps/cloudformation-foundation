@@ -116,4 +116,6 @@ Resources:
 Outputs:
 
   AmiId:
+    Export:
+      Name: !Sub foundation-${AWS::Region}-docker-builder-ami
     Value: !GetAtt Image.ImageId

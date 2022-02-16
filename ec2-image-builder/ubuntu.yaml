@@ -105,4 +105,6 @@ Resources:
 Outputs:
 
   AmiId:
+    Export:
+      Name: !Sub foundation-${AWS::Region}-ubuntu-builder-ami
     Value: !GetAtt Image.ImageId
