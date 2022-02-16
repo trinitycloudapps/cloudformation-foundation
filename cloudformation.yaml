@@ -62,7 +62,7 @@ Resources:
     Properties:
       Parameters:
         AvailabilityZoneCount: 1
-        CidrClassB: 1
+        CidrClassB: 0
         CreateNatGateways: false
         Name: builder
         Sequence: 1
