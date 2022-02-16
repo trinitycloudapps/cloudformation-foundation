@@ -64,7 +64,7 @@ Resources:
         AvailabilityZoneCount: 1
         CidrClassB: 1
         CreateNatGateways: false
-        Name: foundation
+        Name: builder
         Sequence: 1
         StackUrl: !Ref StackUrl
         Stage: !Ref Stage
