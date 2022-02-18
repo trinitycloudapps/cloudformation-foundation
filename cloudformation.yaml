@@ -32,6 +32,10 @@ Parameters:
     Default: foundation
     Type: String
 
+  Domain:
+    Default: none
+    Type: String
+
   StackUrl:
     Type: String
 
@@ -42,6 +46,7 @@ Parameters:
 
 Conditions:
 
+  HasDomain: !Not [ !Equals [ !Ref Domain, none ] ]
   ShouldBuildDefaultVpc: !Equals [ !Ref BuildDefaultVpc, true ]
 
 Resources:
@@ -84,5 +89,13 @@ Resources:
         StackUrl: !Ref StackUrl
         Stage: !Ref Stage
       TemplateURL: !Sub ${StackUrl}/vpc/cloudformation.yaml
+
+  PublicHostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: HasDomain
+    Properties:
+      HostedZoneConfig:
+        Comment: !Ref Domain
+      Name: !Ref Domain
 
 #Outputs:
