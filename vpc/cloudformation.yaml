@@ -27,6 +27,13 @@ Parameters:
   CidrClassB:
     Type: String
 
+  CreatePrivateHostedZone:
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Type: String
+
   CreateNatGateways:
     AllowedValues:
       - true
@@ -83,6 +90,7 @@ Conditions:
           - !Or
             - !Equals [ !Ref AvailabilityZoneCount, 4 ]
             - !Equals [ !Ref AvailabilityZoneCount, 5 ]
+  CreatePrivateHostedZone: !Equals [ !Ref CreatePrivateHostedZone, true ]
   HasBastion: !Not [ !Equals [ !Ref BastionAmiId, none ] ]
   HasBastionKeyName: !Not [ !Equals [ !Ref BastionKeyName, none ] ]
   HasDomain: !Not [ !Equals [ !Ref Domain, none ] ]
@@ -107,6 +115,7 @@ Resources:
       TemplateURL: !Sub ${StackUrl}/vpc/bastion.yaml
 
   PrivateHostedZone:
+    Condition: CreatePrivateHostedZone
     Type: AWS::Route53::HostedZone
     Properties:
       HostedZoneConfig:

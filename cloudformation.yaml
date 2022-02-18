@@ -68,6 +68,7 @@ Resources:
       Parameters:
         AvailabilityZoneCount: 1
         CidrClassB: 0
+        CreatePrivateHostedZone: false
         CreateNatGateways: false
         Name: builder
         Sequence: 1
