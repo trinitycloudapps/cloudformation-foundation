@@ -28,7 +28,7 @@ Parameters:
     Default: 1
     Type: String
 
-  DefaltVpcNamespace:
+  DefaultVpcNamespace:
     Default: foundation
     Type: String
 
@@ -86,7 +86,7 @@ Resources:
         CidrClassB: !Ref DefaultVpcCidrClassB
         CreateNatGateways: !Ref DefaultVpcCreateNatGateways
         Domain: !Ref Domain
-        Name: !Ref DefaltVpcNamespace
+        Name: !Ref DefaultVpcNamespace
         PublicHostedZoneId: !If
           - HasDomain
           - !Ref PublicHostedZone
@@ -101,7 +101,7 @@ Resources:
     Condition: HasDomain
     Properties:
       HostedZoneConfig:
-        Comment: !Sub ${Name}-${Stage}.Domain
-      Name: !Sub ${Name}-${Stage}.Domain
+        Comment: !Sub ${DefaultVpcNamespace}-${Stage}.Domain
+      Name: !Sub ${DefaultVpcNamespace}-${Stage}.Domain
 
 #Outputs:
