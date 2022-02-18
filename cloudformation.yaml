@@ -2,6 +2,36 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
 
+  BuildDefaultVpc:
+    AllowedValues:
+      - false
+      - true
+    Default: true
+    Type: String
+
+  DefaultVpcAvailabilityZoneCount:
+    Default: 2
+    Type: String
+
+  DefaultVpcCidrClassB:
+    Default: 1
+    Type: String
+
+  DefaultVpcCreateNatGateways:
+    AllowedValues:
+      - false
+      - true
+    Default: true
+    Type: String
+
+  DefaultVpcSequence:
+    Default: 1
+    Type: String
+
+  DefaltVpcNamespace:
+    Default: foundation
+    Type: String
+
   StackUrl:
     Type: String
 
@@ -10,23 +40,11 @@ Parameters:
 
 #Mappings:
 
-#Conditions:
+Conditions:
+
+  ShouldBuildDefaultVpc: !Equals [ !Ref BuildDefaultVpc, true ]
 
 Resources:
-
-  #Vpc
-  VpcSubStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      Parameters:
-        AvailabilityZoneCount: 1
-        CidrClassB: 1
-        CreateNatGateways: false
-        Name: foundation
-        Sequence: 1
-        StackUrl: !Ref StackUrl
-        Stage: !Ref Stage
-      TemplateURL: !Sub ${StackUrl}/vpc/cloudformation.yaml
 
   #Ec2 Image Builder
   Ec2ImageBuilderSubStack:
@@ -34,8 +52,37 @@ Resources:
     Properties:
       Parameters:
         StackUrl: !Ref StackUrl
-        SubnetIdList: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
-        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
+        SubnetIdList: !GetAtt ImageBuilderVpcSubStack.Outputs.PublicSubnetIdList
+        VpcId: !GetAtt ImageBuilderVpcSubStack.Outputs.VpcId
       TemplateURL: !Sub ${StackUrl}/ec2-image-builder/cloudformation.yaml
+
+  #Image Builder Vpc
+  ImageBuilderVpcSubStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZoneCount: 1
+        CidrClassB: 0
+        CreateNatGateways: false
+        Name: builder
+        Sequence: 1
+        StackUrl: !Ref StackUrl
+        Stage: !Ref Stage
+      TemplateURL: !Sub ${StackUrl}/vpc/cloudformation.yaml
+
+  #DefaultVpc
+  DefaultVpcSubStack:
+    Condition: ShouldBuildDefaultVpc
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZoneCount: !Ref DefaultVpcAvailabilityZoneCount
+        CidrClassB: !Ref DefaultVpcCidrClassB
+        CreateNatGateways: !Ref DefaultVpcCreateNatGateways
+        Name: !Ref DefaltVpcNamespace
+        Sequence: !Ref DefaultVpcSequence
+        StackUrl: !Ref StackUrl
+        Stage: !Ref Stage
+      TemplateURL: !Sub ${StackUrl}/vpc/cloudformation.yaml
 
 #Outputs:
