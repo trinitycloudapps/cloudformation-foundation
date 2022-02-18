@@ -101,7 +101,7 @@ Resources:
     Condition: HasDomain
     Properties:
       HostedZoneConfig:
-        Comment: !Ref Domain
-      Name: !Ref Domain
+        Comment: !Sub ${Name}-${Stage}.Domain
+      Name: !Sub ${Name}-${Stage}.Domain
 
 #Outputs:
