@@ -101,7 +101,7 @@ Resources:
     Condition: HasDomain
     Properties:
       HostedZoneConfig:
-        Comment: !Sub ${DefaultVpcNamespace}-${Stage}.Domain
-      Name: !Sub ${DefaultVpcNamespace}-${Stage}.Domain
+        Comment: !Sub ${DefaultVpcNamespace}-${Stage}.${Domain}
+      Name: !Sub ${DefaultVpcNamespace}-${Stage}.${Domain}
 
 #Outputs:
