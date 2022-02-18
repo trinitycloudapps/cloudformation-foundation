@@ -27,6 +27,13 @@ Parameters:
   CidrClassB:
     Type: String
 
+  CreatePrivateHostedZone:
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Type: String
+
   CreateNatGateways:
     AllowedValues:
       - true
@@ -53,11 +60,8 @@ Parameters:
     Default: none
     Type: String
 
-  PublicHostedZoneIsApex:
-    AllowedValues:
-      - true
-      - false
-    Default: true
+  PublicHostedZoneId:
+    Default: none
     Type: String
 
   Sequence:
@@ -86,11 +90,11 @@ Conditions:
           - !Or
             - !Equals [ !Ref AvailabilityZoneCount, 4 ]
             - !Equals [ !Ref AvailabilityZoneCount, 5 ]
+  CreatePrivateHostedZone: !Equals [ !Ref CreatePrivateHostedZone, true ]
   HasBastion: !Not [ !Equals [ !Ref BastionAmiId, none ] ]
   HasBastionKeyName: !Not [ !Equals [ !Ref BastionKeyName, none ] ]
   HasDomain: !Not [ !Equals [ !Ref Domain, none ] ]
   HasNatKeyName: !Not [ !Equals [ !Ref NatKeyName, none ] ]
-  PublicHostedZoneIsApex: !Equals [ !Ref PublicHostedZoneIsApex, true ]
 
 Resources:
 
@@ -101,7 +105,7 @@ Resources:
       Parameters:
         AmiId: !Ref BastionAmiId
         DomainName: !If [ HasDomain, !Sub 'bastion.${Name}-${Stage}.${Domain}', none ]
-        HostedZoneId: !If [ HasDomain, !GetAtt PublicHostedZone.Outputs.HostedZoneId, none ]
+        HostedZoneId: !Ref PublicHostedZoneId
         InstanceType: !Ref BastionInstanceType
         KeyName: !If [ HasBastionKeyName, !Ref BastionKeyName, !Ref 'AWS::NoValue' ]
         Stage: !Ref Stage
@@ -111,24 +115,15 @@ Resources:
       TemplateURL: !Sub ${StackUrl}/vpc/bastion.yaml
 
   PrivateHostedZone:
-    Type: AWS::CloudFormation::Stack
-    Condition: HasDomain
+    Condition: CreatePrivateHostedZone
+    Type: AWS::Route53::HostedZone
     Properties:
-      Parameters:
-        Domain: !Sub internal.${Name}-${Stage}.${Domain}
-        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/vpc/hosted-zone.yaml
-
-  PublicHostedZone:
-    Type: AWS::CloudFormation::Stack
-    Condition: HasDomain
-    Properties:
-      Parameters:
-        Domain: !If
-          - PublicHostedZoneIsApex
-          - !Ref Domain
-          - !Sub ${Name}-${Stage}.${Domain}
-      TemplateURL: !Sub ${StackUrl}/vpc/hosted-zone.yaml
+      HostedZoneConfig:
+        Comment: !Sub internal.${Name}-${Stage}.${Domain}
+      Name: !Sub internal.${Name}-${Stage}.${Domain}
+      VPCs:
+        - VPCId: !GetAtt VpcSubStack.Outputs.VpcId
+          VPCRegion: !Ref 'AWS::Region'
 
   SubnetANatInstance:
     Condition: CreateNatInstanceA

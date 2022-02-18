@@ -28,8 +28,12 @@ Parameters:
     Default: 1
     Type: String
 
-  DefaltVpcNamespace:
+  DefaultVpcNamespace:
     Default: foundation
+    Type: String
+
+  Domain:
+    Default: none
     Type: String
 
   StackUrl:
@@ -42,6 +46,7 @@ Parameters:
 
 Conditions:
 
+  HasDomain: !Not [ !Equals [ !Ref Domain, none ] ]
   ShouldBuildDefaultVpc: !Equals [ !Ref BuildDefaultVpc, true ]
 
 Resources:
@@ -63,6 +68,7 @@ Resources:
       Parameters:
         AvailabilityZoneCount: 1
         CidrClassB: 0
+        CreatePrivateHostedZone: false
         CreateNatGateways: false
         Name: builder
         Sequence: 1
@@ -79,10 +85,23 @@ Resources:
         AvailabilityZoneCount: !Ref DefaultVpcAvailabilityZoneCount
         CidrClassB: !Ref DefaultVpcCidrClassB
         CreateNatGateways: !Ref DefaultVpcCreateNatGateways
-        Name: !Ref DefaltVpcNamespace
+        Domain: !Ref Domain
+        Name: !Ref DefaultVpcNamespace
+        PublicHostedZoneId: !If
+          - HasDomain
+          - !Ref PublicHostedZone
+          - none
         Sequence: !Ref DefaultVpcSequence
         StackUrl: !Ref StackUrl
         Stage: !Ref Stage
       TemplateURL: !Sub ${StackUrl}/vpc/cloudformation.yaml
+
+  PublicHostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: HasDomain
+    Properties:
+      HostedZoneConfig:
+        Comment: !Sub ${DefaultVpcNamespace}-${Stage}.${Domain}
+      Name: !Sub ${DefaultVpcNamespace}-${Stage}.${Domain}
 
 #Outputs:
