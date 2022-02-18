@@ -84,7 +84,12 @@ Resources:
         AvailabilityZoneCount: !Ref DefaultVpcAvailabilityZoneCount
         CidrClassB: !Ref DefaultVpcCidrClassB
         CreateNatGateways: !Ref DefaultVpcCreateNatGateways
+        Domain: !Ref Domain
         Name: !Ref DefaltVpcNamespace
+        PublicHostedZoneId: !If
+          - HasDomain
+          - !Ref PublicHostedZone
+          - none
         Sequence: !Ref DefaultVpcSequence
         StackUrl: !Ref StackUrl
         Stage: !Ref Stage
