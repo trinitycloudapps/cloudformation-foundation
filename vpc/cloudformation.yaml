@@ -12,18 +12,6 @@ Parameters:
     Default: 2
     Type: String
 
-  BastionAmiId:
-    Default: none
-    Type: String
-
-  BastionInstanceType:
-    Default: t3.nano
-    Type: String
-
-  BastionKeyName:
-    Default: none
-    Type: String
-
   CidrClassB:
     Type: String
 
@@ -91,28 +79,10 @@ Conditions:
             - !Equals [ !Ref AvailabilityZoneCount, 4 ]
             - !Equals [ !Ref AvailabilityZoneCount, 5 ]
   CreatePrivateHostedZone: !Equals [ !Ref CreatePrivateHostedZone, true ]
-  HasBastion: !Not [ !Equals [ !Ref BastionAmiId, none ] ]
-  HasBastionKeyName: !Not [ !Equals [ !Ref BastionKeyName, none ] ]
   HasDomain: !Not [ !Equals [ !Ref Domain, none ] ]
   HasNatKeyName: !Not [ !Equals [ !Ref NatKeyName, none ] ]
 
 Resources:
-
-  BastionStack:
-    Type: AWS::CloudFormation::Stack
-    Condition: HasBastion
-    Properties:
-      Parameters:
-        AmiId: !Ref BastionAmiId
-        DomainName: !If [ HasDomain, !Sub 'bastion.${Name}-${Stage}.${Domain}', none ]
-        HostedZoneId: !Ref PublicHostedZoneId
-        InstanceType: !Ref BastionInstanceType
-        KeyName: !If [ HasBastionKeyName, !Ref BastionKeyName, !Ref 'AWS::NoValue' ]
-        Stage: !Ref Stage
-        SubnetIdList: !GetAtt VpcSubStack.Outputs.PublicSubnetIdList
-        VpcCidr: !GetAtt VpcSubStack.Outputs.VpcCidr
-        VpcId: !GetAtt VpcSubStack.Outputs.VpcId
-      TemplateURL: !Sub ${StackUrl}/vpc/bastion.yaml
 
   PrivateHostedZone:
     Condition: CreatePrivateHostedZone
