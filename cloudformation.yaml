@@ -75,7 +75,6 @@ Resources:
         CreatePrivateHostedZone: false
         CreateNatGateways: false
         Name: builder
-        NatInstanceAmiId: !Ref DefaultVpcNatInstanceAmiId
         Sequence: 1
         StackUrl: !Ref StackUrl
         Stage: !Ref Stage
@@ -92,6 +91,7 @@ Resources:
         CreateNatGateways: !Ref DefaultVpcCreateNatGateways
         Domain: !Ref Domain
         Name: !Ref DefaultVpcNamespace
+        NatInstanceAmiId: !Ref DefaultVpcNatInstanceAmiId
         PublicHostedZoneId: !If
           - HasDomain
           - !Ref PublicHostedZone
