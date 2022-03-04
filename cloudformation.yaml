@@ -24,6 +24,10 @@ Parameters:
     Default: true
     Type: String
 
+  DefaultVpcNatInstanceAmiId:
+    Default: none
+    Type: String
+
   DefaultVpcSequence:
     Default: 1
     Type: String
@@ -87,6 +91,7 @@ Resources:
         CreateNatGateways: !Ref DefaultVpcCreateNatGateways
         Domain: !Ref Domain
         Name: !Ref DefaultVpcNamespace
+        NatInstanceAmiId: !Ref DefaultVpcNatInstanceAmiId
         PublicHostedZoneId: !If
           - HasDomain
           - !Ref PublicHostedZone
